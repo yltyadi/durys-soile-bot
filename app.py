@@ -31,10 +31,11 @@ def start(message):
 @bot.message_handler(commands=["parasite_words"])
 def list_parasite_words(message):
     parasite_cur_offset = 1
-    parasite_words_helper(parasite_cur_offset, message)
+    markup = parasite_words_markup(parasite_cur_offset, message)
+    bot.send_message(message.chat.id, "List of words:", reply_markup=markup)
 
 
-def parasite_words_helper(offset, message):
+def parasite_words_markup(offset, message):
     parasite_words = requests.get(
         f"http://duryssoile.nu.edu.kz/api/v1.0/words?type=parasite&offset={offset}&limit={word_limit}&sort=asc"
     )
@@ -60,16 +61,18 @@ def parasite_words_helper(offset, message):
     else:
         markup.row(next_btn)
 
-    bot.send_message(message.chat.id, "List of words:", reply_markup=markup)
+    return markup
+    # bot.send_message(message.chat.id, "List of words:", reply_markup=markup)
 
 
 @bot.message_handler(commands=["mispronounced_words"])
 def list_mispronounced_words(message):
     mispronounced_cur_offset = 1
-    mispronounced_words_helper(mispronounced_cur_offset, message)
+    markup = mispronounced_words_markup(mispronounced_cur_offset, message)
+    bot.send_message(message.chat.id, "List of words:", reply_markup=markup)
 
 
-def mispronounced_words_helper(offset, message):
+def mispronounced_words_markup(offset, message):
     misspronounced_words = requests.get(
         f"http://duryssoile.nu.edu.kz/api/v1.0/words?type=commonly-mispronounced&offset={offset}&limit={word_limit}&sort=asc"
     )
@@ -96,25 +99,7 @@ def mispronounced_words_helper(offset, message):
     else:
         markup.row(next_btn)
 
-    bot.send_message(message.chat.id, "List of words:", reply_markup=markup)
-
-
-"""
-@bot.message_handler(content_types=["text"])
-def main(message):
-    result = requests.get(
-        f"https://api.openweathermap.org/data/2.5/weather?q={message.text}&appid={config.WEATHER_API}&units=metric"
-    )
-    if result.status_code == 200:
-        data = json.loads(result.text)
-        temp = data["main"]["temp"]
-        bot.send_message(
-            chat_id=message.chat.id,
-            text=f"Temperature in city {message.text} is {data}",
-        )
-    else:
-        bot.send_message(chat_id=message.chat.id, text="Error occured")
-"""
+    return markup
 
 
 @bot.message_handler()
@@ -127,36 +112,43 @@ def callback_page_handler(callback):
     global parasite_cur_offset
     if callback.data == "parasite_prev_page":
         parasite_cur_offset -= 1
-        bot.delete_message(
-            chat_id=callback.message.chat.id, message_id=callback.message.message_id
+        markup = parasite_words_markup(parasite_cur_offset, callback.message)
+        bot.edit_message_text(
+            chat_id=callback.message.chat.id,
+            message_id=callback.message.message_id,
+            text=callback.message.text,
+            reply_markup=markup,
         )
-        parasite_words_helper(parasite_cur_offset, callback.message)
     elif callback.data == "parasite_next_page":
-        # bot.send_message(callback.message.chat.id, callback.message)
         parasite_cur_offset += 1
-        bot.delete_message(
-            chat_id=callback.message.chat.id, message_id=callback.message.message_id
+        markup = parasite_words_markup(parasite_cur_offset, callback.message)
+        bot.edit_message_text(
+            chat_id=callback.message.chat.id,
+            message_id=callback.message.message_id,
+            text=callback.message.text,
+            reply_markup=markup,
         )
-        parasite_words_helper(parasite_cur_offset, callback.message)
-        # bot.edit_message_text(repl)
 
     global mispronounced_cur_offset
     if callback.data == "misspro_prev_page":
         mispronounced_cur_offset -= 1
-        bot.delete_message(
-            chat_id=callback.message.chat.id, message_id=callback.message.message_id
+        markup = mispronounced_words_markup(mispronounced_cur_offset, callback.message)
+        bot.edit_message_text(
+            chat_id=callback.message.chat.id,
+            message_id=callback.message.message_id,
+            text=callback.message.text,
+            reply_markup=markup,
         )
-        mispronounced_words_helper(mispronounced_cur_offset, callback.message)
     elif callback.data == "misspro_next_page":
         mispronounced_cur_offset += 1
-        bot.delete_message(
-            chat_id=callback.message.chat.id, message_id=callback.message.message_id
+        markup = mispronounced_words_markup(mispronounced_cur_offset, callback.message)
+        bot.edit_message_text(
+            chat_id=callback.message.chat.id,
+            message_id=callback.message.message_id,
+            text=callback.message.text,
+            reply_markup=markup,
         )
-        mispronounced_words_helper(mispronounced_cur_offset, callback.message)
 
 
 if __name__ == "__main__":
     bot.polling(non_stop=True)
-
-# bot.reply_to(message=callback.message, text="next page")
-# bot.register_next_step_handler(callback.message, list_parasite_words)
