@@ -8,8 +8,8 @@ from telebot import types
 import config
 
 word_limit = 5
-parasite_cur_offset = 1
-mispronounced_cur_offset = 1
+parasite_cur_offset = 0
+mispronounced_cur_offset = 0
 
 bot = telebot.TeleBot(config.TOKEN)
 
@@ -30,7 +30,7 @@ def start(message):
 
 @bot.message_handler(commands=["parasite_words"])
 def list_parasite_words(message):
-    parasite_cur_offset = 1
+    parasite_cur_offset = 0
     markup = parasite_words_markup(parasite_cur_offset, message)
     bot.send_message(message.chat.id, "List of words:", reply_markup=markup)
 
@@ -46,8 +46,8 @@ def parasite_words_markup(offset, message):
         return
 
     markup = types.InlineKeyboardMarkup(row_width=2)
-
-    for word in json.loads(parasite_words.text):
+    parasite_words_data = json.loads(parasite_words.text)
+    for word in parasite_words_data:
         btn = types.InlineKeyboardButton(word["word"], callback_data=word["id"])
         markup.add(btn)
 
@@ -65,9 +65,13 @@ def parasite_words_markup(offset, message):
     # bot.send_message(message.chat.id, "List of words:", reply_markup=markup)
 
 
+def send_parasite_word(message):
+    pass
+
+
 @bot.message_handler(commands=["mispronounced_words"])
 def list_mispronounced_words(message):
-    mispronounced_cur_offset = 1
+    mispronounced_cur_offset = 0
     markup = mispronounced_words_markup(mispronounced_cur_offset, message)
     bot.send_message(message.chat.id, "List of words:", reply_markup=markup)
 
@@ -102,6 +106,10 @@ def mispronounced_words_markup(offset, message):
     return markup
 
 
+def send_mispronounced_word(message):
+    pass
+
+
 @bot.message_handler()
 def main(message):
     bot.send_message(chat_id=message.chat.id, text="Cannot understand you(")
@@ -109,6 +117,7 @@ def main(message):
 
 @bot.callback_query_handler(func=lambda callback: True)
 def callback_page_handler(callback):
+    # handle parasite words pagination
     global parasite_cur_offset
     if callback.data == "parasite_prev_page":
         parasite_cur_offset -= 1
@@ -129,6 +138,7 @@ def callback_page_handler(callback):
             reply_markup=markup,
         )
 
+    # handle mispronounced words pagination
     global mispronounced_cur_offset
     if callback.data == "misspro_prev_page":
         mispronounced_cur_offset -= 1
@@ -148,6 +158,8 @@ def callback_page_handler(callback):
             text=callback.message.text,
             reply_markup=markup,
         )
+
+    # handle single word sending
 
 
 if __name__ == "__main__":
