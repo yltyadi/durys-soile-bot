@@ -7,7 +7,7 @@ from telebot import types
 # local imports
 import config
 
-word_limit = 5
+word_limit = 10
 parasite_cur_offset = 0
 mispronounced_cur_offset = 0
 
@@ -31,8 +31,10 @@ def start(message):
 @bot.message_handler(commands=["parasite_words"])
 def list_parasite_words(message):
     parasite_cur_offset = 0
-    markup = parasite_words_markup(parasite_cur_offset, message)
-    bot.send_message(message.chat.id, "List of words:", reply_markup=markup)
+    parasite_markup = parasite_words_markup(parasite_cur_offset, message)
+    bot.send_message(
+        chat_id=message.chat.id, text="List of words", reply_markup=parasite_markup
+    )
 
 
 def parasite_words_markup(offset, message):
@@ -46,12 +48,12 @@ def parasite_words_markup(offset, message):
         return
 
     markup = types.InlineKeyboardMarkup(row_width=2)
-    parasite_words_data = json.loads(parasite_words.text)
-    for word in parasite_words_data:
-        btn = types.InlineKeyboardButton(word["word"], callback_data=word["id"])
+
+    for word in json.loads(parasite_words.text):
+        btn = types.InlineKeyboardButton(word["word"], callback_data=str(word["id"]))
         markup.add(btn)
 
-    if offset != 1:
+    if offset != 0:
         prev_btn = types.InlineKeyboardButton(
             "⏪ Previous", callback_data="parasite_prev_page"
         )
@@ -62,18 +64,15 @@ def parasite_words_markup(offset, message):
         markup.row(next_btn)
 
     return markup
-    # bot.send_message(message.chat.id, "List of words:", reply_markup=markup)
-
-
-def send_parasite_word(message):
-    pass
 
 
 @bot.message_handler(commands=["mispronounced_words"])
 def list_mispronounced_words(message):
     mispronounced_cur_offset = 0
     markup = mispronounced_words_markup(mispronounced_cur_offset, message)
-    bot.send_message(message.chat.id, "List of words:", reply_markup=markup)
+    bot.send_message(
+        chat_id=message.chat.id, text="List of words:", reply_markup=markup
+    )
 
 
 def mispronounced_words_markup(offset, message):
@@ -90,24 +89,20 @@ def mispronounced_words_markup(offset, message):
     markup = types.InlineKeyboardMarkup(row_width=2)
 
     for word in json.loads(misspronounced_words.text):
-        btn = types.InlineKeyboardButton(word["word"], callback_data=word["id"])
+        btn = types.InlineKeyboardButton(word["word"], callback_data=str(word["id"]))
         markup.add(btn)
 
-    if offset != 1:
+    if offset != 0:
         prev_btn = types.InlineKeyboardButton(
-            "⏪ Previous", callback_data="misspro_prev_page"
+            "⏪ Previous", callback_data="mispro_prev_page"
         )
-    next_btn = types.InlineKeyboardButton("Next ⏩", callback_data="misspro_next_page")
+    next_btn = types.InlineKeyboardButton("Next ⏩", callback_data="mispro_next_page")
     if "prev_btn" in locals():
         markup.row(prev_btn, next_btn)
     else:
         markup.row(next_btn)
 
     return markup
-
-
-def send_mispronounced_word(message):
-    pass
 
 
 @bot.message_handler()
@@ -140,7 +135,7 @@ def callback_page_handler(callback):
 
     # handle mispronounced words pagination
     global mispronounced_cur_offset
-    if callback.data == "misspro_prev_page":
+    if callback.data == "mispro_prev_page":
         mispronounced_cur_offset -= 1
         markup = mispronounced_words_markup(mispronounced_cur_offset, callback.message)
         bot.edit_message_text(
@@ -149,7 +144,7 @@ def callback_page_handler(callback):
             text=callback.message.text,
             reply_markup=markup,
         )
-    elif callback.data == "misspro_next_page":
+    elif callback.data == "mispro_next_page":
         mispronounced_cur_offset += 1
         markup = mispronounced_words_markup(mispronounced_cur_offset, callback.message)
         bot.edit_message_text(
@@ -159,7 +154,21 @@ def callback_page_handler(callback):
             reply_markup=markup,
         )
 
-    # handle single word sending
+    # handle single word audio sending
+    if callback.data.isdigit():
+        word_id = callback.data
+        audio = requests.get(
+            f"http://duryssoile.nu.edu.kz/api/v1.0/audio/{str(word_id)}",
+            allow_redirects=True,
+        )
+        if audio.status_code != 200:
+            bot.send_message(chat_id=callback.message.chat.id, text="Error!")
+            return
+        bot.send_audio(
+            chat_id=callback.message.chat.id,
+            audio=audio.content,
+            title="play me",
+        )
 
 
 if __name__ == "__main__":
