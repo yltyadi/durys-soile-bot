@@ -16,15 +16,9 @@ bot = telebot.TeleBot(config.TOKEN)
 
 @bot.message_handler(commands=["start"])
 def start(message):
-    # markup = types.ReplyKeyboardMarkup(row_width=2, resize_keyboard=True)
-    # btn1 = types.KeyboardButton("List of words")
-    # btn2 = types.KeyboardButton("Get one word")
-    # btn3 = types.KeyboardButton("test")
-    # markup.add(btn1, btn2, btn3)
     bot.send_message(
         chat_id=message.chat.id,
         text=f"Hello, {message.from_user.first_name}!",
-        # reply_markup=markup,
     )
 
 
@@ -33,7 +27,9 @@ def list_parasite_words(message):
     parasite_cur_offset = 0
     parasite_markup = parasite_words_markup(parasite_cur_offset, message)
     bot.send_message(
-        chat_id=message.chat.id, text="List of words", reply_markup=parasite_markup
+        chat_id=message.chat.id,
+        text="List of words:",
+        reply_markup=parasite_markup,
     )
 
 
@@ -43,7 +39,8 @@ def parasite_words_markup(offset, message):
     )
     if parasite_words.status_code != 200:
         bot.send_message(
-            message.chat.id, f"Error! {parasite_words.status_code} Status Code recieved"
+            message.chat.id,
+            f"Error! {parasite_words.status_code} Status Code recieved",
         )
         return
 
@@ -71,7 +68,9 @@ def list_mispronounced_words(message):
     mispronounced_cur_offset = 0
     markup = mispronounced_words_markup(mispronounced_cur_offset, message)
     bot.send_message(
-        chat_id=message.chat.id, text="List of words:", reply_markup=markup
+        chat_id=message.chat.id,
+        text="List of words:",
+        reply_markup=markup,
     )
 
 
@@ -107,7 +106,10 @@ def mispronounced_words_markup(offset, message):
 
 @bot.message_handler()
 def main(message):
-    bot.send_message(chat_id=message.chat.id, text="Cannot understand you(")
+    bot.send_message(
+        chat_id=message.chat.id,
+        text="Cannot understand you(",
+    )
 
 
 @bot.callback_query_handler(func=lambda callback: True)
@@ -158,16 +160,24 @@ def callback_page_handler(callback):
     if callback.data.isdigit():
         word_id = callback.data
         audio = requests.get(
-            f"http://duryssoile.nu.edu.kz/api/v1.0/audio/{str(word_id)}",
-            allow_redirects=True,
+            f"http://duryssoile.nu.edu.kz/api/v1.0/audio/{str(word_id)}"
         )
         if audio.status_code != 200:
             bot.send_message(chat_id=callback.message.chat.id, text="Error!")
             return
-        bot.send_audio(
+
+        word = requests.get(
+            f"http://duryssoile.nu.edu.kz/api/v1.0/words/{str(word_id)}"
+        )
+        if word.status_code != 200:
+            bot.send_message(chat_id=callback.message.chat.id, text="Error!")
+            return
+
+        word_name = json.loads(word.text)["word"]
+        bot.send_voice(
             chat_id=callback.message.chat.id,
-            audio=audio.content,
-            title="play me",
+            voice=audio.content,
+            caption=word_name,
         )
 
 
