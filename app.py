@@ -27,6 +27,7 @@ def start(message):
 @bot.message_handler(commands=["parasite_words"])
 def list_parasite_words(message):
     global filter
+    global parasite_cur_offset
     filter = message.text.split()[1:]  # storing user args passed with the command
     filter = " ".join(filter)
     parasite_cur_offset = 0
@@ -62,7 +63,7 @@ def parasite_words_markup(message, offset, filter):
     if len(data) == 0:
         bot.send_message(
             message.chat.id,
-            f"No such word exists",
+            "No such word exists",
         )
         return None
 
@@ -103,6 +104,7 @@ def parasite_words_markup(message, offset, filter):
 @bot.message_handler(commands=["mispronounced_words"])
 def list_mispronounced_words(message):
     global filter
+    global mispronounced_cur_offset
     filter = message.text.split()[1:]  # storing user args passed with the command
     filter = " ".join(filter)
     mispronounced_cur_offset = 0
@@ -134,6 +136,7 @@ def mispronounced_words_markup(message, offset, filter):
         return
 
     data = json.loads(misspronounced_words.text)
+    # print(len(data))
     if len(data) == 0:
         bot.send_message(
             message.chat.id,
@@ -267,7 +270,7 @@ def callback_page_handler(callback):
             )
 
         else:
-            audio_text = word_data["word"]
+            audio_text = "🎧 " + word_data["word"]
 
         last_sent_audio = bot.send_voice(
             chat_id=callback.message.chat.id,
