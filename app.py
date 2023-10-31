@@ -26,14 +26,12 @@ def start(message):
 
 @bot.message_handler(commands=["parasite_words"])
 def list_parasite_words(message):
+    global filter
     filter = message.text.split()[1:]  # storing user args passed with the command
     filter = " ".join(filter)
     parasite_cur_offset = 0
 
-    if len(filter) == 0:
-        parasite_markup = parasite_words_markup(message, parasite_cur_offset)
-    else:
-        parasite_markup = filter_parasite_words(message, parasite_cur_offset, filter)
+    parasite_markup = parasite_words_markup(message, parasite_cur_offset, filter)
     if parasite_markup != None:
         bot.send_message(
             chat_id=message.chat.id,
@@ -42,10 +40,15 @@ def list_parasite_words(message):
         )
 
 
-def parasite_words_markup(message, offset):
-    parasite_words = requests.get(
-        f"http://duryssoile.nu.edu.kz/api/v1.0/words?type=parasite&offset={offset}&limit={word_limit}&sort=asc"
-    )
+def parasite_words_markup(message, offset, filter):
+    if len(filter) == 0:
+        parasite_words = requests.get(
+            f"http://duryssoile.nu.edu.kz/api/v1.0/words?type=parasite&offset={offset}&limit={word_limit}&sort=asc"
+        )
+    else:
+        parasite_words = requests.get(
+            f"http://duryssoile.nu.edu.kz/api/v1.0/words?type=parasite&filter={filter}&offset={offset}&limit={word_limit}&sort=asc"
+        )
 
     if parasite_words.status_code != 200:
         bot.send_message(
@@ -55,42 +58,7 @@ def parasite_words_markup(message, offset):
         return None
 
     data = json.loads(parasite_words.text)
-    markup = types.InlineKeyboardMarkup(row_width=2)
-
-    for word in data:
-        btn = types.InlineKeyboardButton(word["word"], callback_data=str(word["id"]))
-        markup.add(btn)
-
-    if offset != 0:
-        prev_btn = types.InlineKeyboardButton(
-            "⏪ Previous", callback_data="parasite_prev_page"
-        )
-    if len(data) == word_limit:
-        next_btn = types.InlineKeyboardButton(
-            "Next ⏩", callback_data="parasite_next_page"
-        )
-    if "prev_btn" in locals():
-        markup.row(prev_btn, next_btn)
-    elif "next_btn" in locals():
-        markup.row(next_btn)
-
-    return markup
-
-
-def filter_parasite_words(message, offset, filter):
-    parasite_words = requests.get(
-        f"http://duryssoile.nu.edu.kz/api/v1.0/words?type=parasite&filter={filter}&offset={offset}&limit={word_limit}&sort=asc"
-    )
-
-    if parasite_words.status_code != 200:
-        bot.send_message(
-            message.chat.id,
-            f"Error! {parasite_words.status_code} Status Code recieved",
-        )
-        return None
-
-    data = json.loads(parasite_words.text)
-
+    # print(len(data))
     if len(data) == 0:
         bot.send_message(
             message.chat.id,
@@ -109,12 +77,24 @@ def filter_parasite_words(message, offset, filter):
             "⏪ Previous", callback_data="parasite_prev_page"
         )
     if len(data) == word_limit:
-        next_btn = types.InlineKeyboardButton(
-            "Next ⏩", callback_data="parasite_next_page"
-        )
-    if "prev_btn" in locals():
+        if len(filter) == 0:
+            check_request = requests.get(
+                f"http://duryssoile.nu.edu.kz/api/v1.0/words?type=parasite&offset={offset+1}&limit={word_limit}&sort=asc"
+            )
+        else:
+            check_request = requests.get(
+                f"http://duryssoile.nu.edu.kz/api/v1.0/words?type=parasite&filter={filter}&offset={offset+1}&limit={word_limit}&sort=asc"
+            )
+        # print(len(json.loads(check_request.text)))
+        if len(json.loads(check_request.text)) != 0:
+            next_btn = types.InlineKeyboardButton(
+                "Next ⏩", callback_data="parasite_next_page"
+            )
+    if "prev_btn" in locals() and "next_btn" in locals():
         markup.row(prev_btn, next_btn)
-    elif "next_btn" in locals():
+    elif "prev_btn" in locals() and "next_btn" not in locals():
+        markup.row(prev_btn)
+    elif "next_btn" in locals() and "prev_btn" not in locals():
         markup.row(next_btn)
 
     return markup
@@ -122,14 +102,12 @@ def filter_parasite_words(message, offset, filter):
 
 @bot.message_handler(commands=["mispronounced_words"])
 def list_mispronounced_words(message):
+    global filter
     filter = message.text.split()[1:]  # storing user args passed with the command
     filter = " ".join(filter)
     mispronounced_cur_offset = 0
 
-    if len(filter) == 0:
-        markup = mispronounced_words_markup(message, mispronounced_cur_offset)
-    else:
-        markup = filter_mispronounced_words(message, mispronounced_cur_offset, filter)
+    markup = mispronounced_words_markup(message, mispronounced_cur_offset, filter)
     if markup != None:
         bot.send_message(
             chat_id=message.chat.id,
@@ -138,44 +116,16 @@ def list_mispronounced_words(message):
         )
 
 
-def mispronounced_words_markup(message, offset):
-    misspronounced_words = requests.get(
-        f"http://duryssoile.nu.edu.kz/api/v1.0/words?type=commonly-mispronounced&offset={offset}&limit={word_limit}&sort=asc"
-    )
-    if misspronounced_words.status_code != 200:
-        bot.send_message(
-            message.chat.id,
-            f"Error! {misspronounced_words.status_code} Status Code recieved",
+def mispronounced_words_markup(message, offset, filter):
+    if len(filter) == 0:
+        misspronounced_words = requests.get(
+            f"http://duryssoile.nu.edu.kz/api/v1.0/words?type=commonly-mispronounced&offset={offset}&limit={word_limit}&sort=asc"
         )
-        return
-
-    data = json.loads(misspronounced_words.text)
-    markup = types.InlineKeyboardMarkup(row_width=2)
-
-    for word in data:
-        btn = types.InlineKeyboardButton(word["word"], callback_data=str(word["id"]))
-        markup.add(btn)
-
-    if offset != 0:
-        prev_btn = types.InlineKeyboardButton(
-            "⏪ Previous", callback_data="mispro_prev_page"
+    else:
+        misspronounced_words = requests.get(
+            f"http://duryssoile.nu.edu.kz/api/v1.0/words?type=commonly-mispronounced&filter={filter}&offset={offset}&limit={word_limit}&sort=asc"
         )
-    if len(data) == word_limit:
-        next_btn = types.InlineKeyboardButton(
-            "Next ⏩", callback_data="mispro_next_page"
-        )
-    if "prev_btn" in locals():
-        markup.row(prev_btn, next_btn)
-    elif "next_btn" in locals():
-        markup.row(next_btn)
 
-    return markup
-
-
-def filter_mispronounced_words(message, offset, filter):
-    misspronounced_words = requests.get(
-        f"http://duryssoile.nu.edu.kz/api/v1.0/words?type=commonly-mispronounced&filter={filter}&offset={offset}&limit={word_limit}&sort=asc"
-    )
     if misspronounced_words.status_code != 200:
         bot.send_message(
             message.chat.id,
@@ -202,12 +152,23 @@ def filter_mispronounced_words(message, offset, filter):
             "⏪ Previous", callback_data="mispro_prev_page"
         )
     if len(data) == word_limit:
-        next_btn = types.InlineKeyboardButton(
-            "Next ⏩", callback_data="mispro_next_page"
-        )
-    if "prev_btn" in locals():
+        if len(filter) == 0:
+            check_request = requests.get(
+                f"http://duryssoile.nu.edu.kz/api/v1.0/words?type=commonly-mispronounced&offset={offset+1}&limit={word_limit}&sort=asc"
+            )
+        else:
+            check_request = requests.get(
+                f"http://duryssoile.nu.edu.kz/api/v1.0/words?type=commonly-mispronounced&filter={filter}&offset={offset+1}&limit={word_limit}&sort=asc"
+            )
+        if len(json.loads(check_request.text)) != 0:
+            next_btn = types.InlineKeyboardButton(
+                "Next ⏩", callback_data="mispro_next_page"
+            )
+    if "prev_btn" in locals() and "next_btn" in locals():
         markup.row(prev_btn, next_btn)
-    elif "next_btn" in locals():
+    elif "prev_btn" in locals() and "next_btn" not in locals():
+        markup.row(prev_btn)
+    elif "next_btn" in locals() and "prev_btn" not in locals():
         markup.row(next_btn)
 
     return markup
@@ -225,9 +186,10 @@ def main(message):
 def callback_page_handler(callback):
     # handle parasite words pagination
     global parasite_cur_offset
+    global filter
     if callback.data == "parasite_prev_page":
         parasite_cur_offset -= 1
-        markup = parasite_words_markup(callback.message, parasite_cur_offset)
+        markup = parasite_words_markup(callback.message, parasite_cur_offset, filter)
         bot.edit_message_text(
             chat_id=callback.message.chat.id,
             message_id=callback.message.message_id,
@@ -236,7 +198,7 @@ def callback_page_handler(callback):
         )
     elif callback.data == "parasite_next_page":
         parasite_cur_offset += 1
-        markup = parasite_words_markup(callback.message, parasite_cur_offset)
+        markup = parasite_words_markup(callback.message, parasite_cur_offset, filter)
         bot.edit_message_text(
             chat_id=callback.message.chat.id,
             message_id=callback.message.message_id,
@@ -248,7 +210,9 @@ def callback_page_handler(callback):
     global mispronounced_cur_offset
     if callback.data == "mispro_prev_page":
         mispronounced_cur_offset -= 1
-        markup = mispronounced_words_markup(callback.message, mispronounced_cur_offset)
+        markup = mispronounced_words_markup(
+            callback.message, mispronounced_cur_offset, filter
+        )
         bot.edit_message_text(
             chat_id=callback.message.chat.id,
             message_id=callback.message.message_id,
@@ -257,7 +221,9 @@ def callback_page_handler(callback):
         )
     elif callback.data == "mispro_next_page":
         mispronounced_cur_offset += 1
-        markup = mispronounced_words_markup(callback.message, mispronounced_cur_offset)
+        markup = mispronounced_words_markup(
+            callback.message, mispronounced_cur_offset, filter
+        )
         bot.edit_message_text(
             chat_id=callback.message.chat.id,
             message_id=callback.message.message_id,
@@ -289,11 +255,24 @@ def callback_page_handler(callback):
                 message_id=last_audio_id,
             )
 
-        word_name = json.loads(word.text)["word"]
+        word_data = json.loads(word.text)
+        if int(callback.data) < 186:
+            correct_version = word_data["correctVersions"][0]
+            audio_text = (
+                "❌" + word_data["word"] + "\n" + "✅" + correct_version["word"] + "\n\n"
+            )
+            audio_text += (
+                "❌" + correct_version["incorrectUsage"] + "\n"
+                "✅" + correct_version["correctUsage"]
+            )
+
+        else:
+            audio_text = word_data["word"]
+
         last_sent_audio = bot.send_voice(
             chat_id=callback.message.chat.id,
             voice=audio.content,
-            caption=word_name,
+            caption=audio_text,
         )
         last_audio_id = last_sent_audio.message_id
 
