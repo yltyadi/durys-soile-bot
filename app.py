@@ -9,7 +9,9 @@ import config
 
 word_limit = 10
 parasite_cur_offset = 0
+# parasite_filter_offset = 0
 mispronounced_cur_offset = 0
+# mispronounced_filter_offset = 0
 last_audio_id = None
 filter = None
 
@@ -20,7 +22,7 @@ bot = telebot.TeleBot(config.TOKEN)
 def start(message):
     bot.send_message(
         chat_id=message.chat.id,
-        text=f"Hello, {message.from_user.first_name}!",
+        text=f"Сәлем, {message.from_user.first_name}!",
     )
 
 
@@ -30,13 +32,14 @@ def list_parasite_words(message):
     global parasite_cur_offset
     filter = message.text.split()[1:]  # storing user args passed with the command
     filter = " ".join(filter)
-    parasite_cur_offset = 0
+    parasite_cur_offset = 0  # bug: if we go back to previous messages and press btns, it will crash because of the same offset
+    # solution: can create different 4 offsets for filter and general list eetc. or can just delete prev
 
     parasite_markup = parasite_words_markup(message, parasite_cur_offset, filter)
     if parasite_markup != None:
         bot.send_message(
             chat_id=message.chat.id,
-            text="List of words:",
+            text="Бөгде тіл сөздер:",
             reply_markup=parasite_markup,
         )
 
@@ -54,7 +57,7 @@ def parasite_words_markup(message, offset, filter):
     if parasite_words.status_code != 200:
         bot.send_message(
             message.chat.id,
-            f"Error! {parasite_words.status_code} Status Code recieved",
+            f"Error! {parasite_words.status_code} Status Code received",
         )
         return None
 
@@ -75,7 +78,7 @@ def parasite_words_markup(message, offset, filter):
 
     if offset != 0:
         prev_btn = types.InlineKeyboardButton(
-            "⏪ Previous", callback_data="parasite_prev_page"
+            "⏪ Артқа", callback_data="parasite_prev_page"
         )
     if len(data) == word_limit:
         if len(filter) == 0:
@@ -89,7 +92,7 @@ def parasite_words_markup(message, offset, filter):
         # print(len(json.loads(check_request.text)))
         if len(json.loads(check_request.text)) != 0:
             next_btn = types.InlineKeyboardButton(
-                "Next ⏩", callback_data="parasite_next_page"
+                "Келесі ⏩", callback_data="parasite_next_page"
             )
     if "prev_btn" in locals() and "next_btn" in locals():
         markup.row(prev_btn, next_btn)
@@ -113,7 +116,7 @@ def list_mispronounced_words(message):
     if markup != None:
         bot.send_message(
             chat_id=message.chat.id,
-            text="List of words:",
+            text="Жиі қолданылатын сөздер:",
             reply_markup=markup,
         )
 
@@ -152,7 +155,7 @@ def mispronounced_words_markup(message, offset, filter):
 
     if offset != 0:
         prev_btn = types.InlineKeyboardButton(
-            "⏪ Previous", callback_data="mispro_prev_page"
+            "⏪ Артқа", callback_data="mispro_prev_page"
         )
     if len(data) == word_limit:
         if len(filter) == 0:
@@ -165,7 +168,7 @@ def mispronounced_words_markup(message, offset, filter):
             )
         if len(json.loads(check_request.text)) != 0:
             next_btn = types.InlineKeyboardButton(
-                "Next ⏩", callback_data="mispro_next_page"
+                "Келесі ⏩", callback_data="mispro_next_page"
             )
     if "prev_btn" in locals() and "next_btn" in locals():
         markup.row(prev_btn, next_btn)
@@ -181,7 +184,7 @@ def mispronounced_words_markup(message, offset, filter):
 def main(message):
     bot.send_message(
         chat_id=message.chat.id,
-        text="Cannot understand you(",
+        text="Сізді түсінбедім(",
     )
 
 
@@ -190,6 +193,12 @@ def callback_page_handler(callback):
     # handle parasite words pagination
     global parasite_cur_offset
     global filter
+    # global last_parasite_id
+    # if last_parasite_id != None:
+    #     bot.delete_message(
+    #         chat_id=callback.message.chat.id,
+    #         message_id=last_parasite_id,
+    #     )
     if callback.data == "parasite_prev_page":
         parasite_cur_offset -= 1
         markup = parasite_words_markup(callback.message, parasite_cur_offset, filter)
@@ -208,9 +217,16 @@ def callback_page_handler(callback):
             text=callback.message.text,
             reply_markup=markup,
         )
+    # last_parasite_id = callback.message.message_id
 
     # handle mispronounced words pagination
     global mispronounced_cur_offset
+    # global last_mispro_id
+    # if last_mispro_id != None:
+    #     bot.delete_message(
+    #         chat_id=callback.message.chat.id,
+    #         message_id=last_mispro_id,
+    #     )
     if callback.data == "mispro_prev_page":
         mispronounced_cur_offset -= 1
         markup = mispronounced_words_markup(
@@ -233,6 +249,7 @@ def callback_page_handler(callback):
             text=callback.message.text,
             reply_markup=markup,
         )
+    # last_mispro_id = callback.message.message_id
 
     # handle single word audio sending
     if callback.data.isdigit():
