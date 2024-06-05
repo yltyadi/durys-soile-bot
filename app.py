@@ -3,9 +3,8 @@ import requests
 import json
 import telebot
 from telebot import types
-
-# local imports
-import config
+from dotenv import load_dotenv
+import os
 
 word_limit = 10
 parasite_cur_offset = 0
@@ -15,7 +14,8 @@ mispronounced_cur_offset = 0
 last_audio_id = None
 filter = None
 
-bot = telebot.TeleBot(config.TOKEN)
+load_dotenv()
+bot = telebot.TeleBot(os.getenv("TOKEN"))
 
 
 @bot.message_handler(commands=["start"])
