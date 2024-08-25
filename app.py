@@ -268,12 +268,14 @@ def callback_page_handler(callback):
             bot.send_message(chat_id=callback.message.chat.id, text="Error!")
             return
 
-        global last_audio_id
-        if last_audio_id != None:
-            bot.delete_message(
-                chat_id=callback.message.chat.id,
-                message_id=last_audio_id,
-            )
+        # global last_audio_id
+        # if last_audio_id != None:
+        #     print(callback.message.chat.id)
+        #     print(last_audio_id)
+        #     bot.delete_message(
+        #         chat_id=callback.message.chat.id,
+        #         message_id=last_audio_id,
+        #     )
 
         word_data = json.loads(word.text)
         if int(callback.data) < 186:
